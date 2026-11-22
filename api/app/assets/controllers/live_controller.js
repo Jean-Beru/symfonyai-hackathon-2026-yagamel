@@ -82,9 +82,9 @@ export default class extends Controller {
         this.drawPath(context, video.frames, index);
     }
 
-    // 8150 ms: 8'15.
+    // 11605 ms: 11'61. toFixed() rounds as the sender (Python) does: 8155 ms is 8'15, as "8.15 s".
     time(timestamp) {
-        return `${Math.floor(timestamp / 1000)}'${String(Math.floor(timestamp % 1000 / 10)).padStart(2, '0')}`;
+        return (timestamp / 1000).toFixed(2).replace('.', "'");
     }
 
     // The goal that holds the ball of the frame is yellow, the other zones are white.
