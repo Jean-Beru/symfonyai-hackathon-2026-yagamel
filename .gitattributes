@@ -1,0 +1,2 @@
+yolo/models/** filter=lfs diff=lfs merge=lfs -text
+referee/videos/** filter=lfs diff=lfs merge=lfs -text

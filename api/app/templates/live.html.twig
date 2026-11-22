@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Live referee{% endblock %}
+
+{% block body %}
+    <main {{ stimulus_controller('live', {hub: mercure(topic), pathSeconds: path_seconds}) }}>
+        <header>
+            <h1>Live referee</h1>
+            <span class="status" role="status" {{ stimulus_target('live', 'status') }}>Connecting</span>
+        </header>
+        <p class="legend">White: the goals and the field, yellow: the goal that holds the ball. A ball out of them is ignored. The path shows the ball over the last {{ path_seconds }} seconds, from blue (oldest) to red (frame shown). Move the slider to see a previous frame. One card per video sent to <code>POST /frames</code>.</p>
+        <div class="grid" {{ stimulus_target('live', 'videos') }}>
+            <p class="empty">No video yet. Start the sender.</p>
+        </div>
+
+        <template {{ stimulus_target('live', 'card') }}>
+            <article class="card">
+                <h2 data-field="id"></h2>
+                <div class="frame">
+                    <img alt="" width="544" height="960">
+                    <canvas width="544" height="960" role="img" aria-label="The goals, the field and the path of the ball"></canvas>
+                </div>
+                <div class="seek">
+                    <input type="range" min="0" max="0" value="0" aria-label="Frame" {{ stimulus_action('live', 'seek', 'input') }}>
+                    <output data-field="position"></output>
+                </div>
+                <dl>
+                    <dt>Frames</dt><dd data-field="frames"></dd>
+                    <dt>With the ball</dt><dd data-field="ball"></dd>
+                    <dt>Last frame</dt><dd data-field="ms"></dd>
+                </dl>
+                <ol class="decisions" aria-live="polite"></ol>
+            </article>
+        </template>
+    </main>
+{% endblock %}

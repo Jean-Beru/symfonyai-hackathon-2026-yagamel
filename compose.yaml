@@ -1,0 +1,73 @@
+services:
+  # The live referee (Symfony, FrankenPHP worker mode): POST /frames and the live page /live, see README.md.
+  php:
+    build:
+      context: './api/'
+      target: 'prod'
+    restart: 'unless-stopped'
+    ports:
+      - '8080:3000'
+    # Read by Symfony (publisher) and by the hub of the Caddyfile. Set MERCURE_JWT_SECRET on the host to change the key.
+    environment:
+      MERCURE_JWT_SECRET: '${MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}'
+      MERCURE_JWT_ISSUER: 'yolo-api'
+      # POST /frames: no value here, the value of the host when set, else the default of api/app/.env.
+      REFEREE_MIN_CONFIDENCE:
+      GOAL_MISSING_FRAMES:
+      GAMELLE_OUTSIDE_FRAMES:
+      PATH_SECONDS:
+    # PHP writes each uploaded frame to /tmp: in memory, not on the disk.
+    tmpfs:
+      - '/tmp'
+    depends_on:
+      yolo:
+        condition: 'service_healthy'
+
+  php_test:
+    build:
+      context: './api/'
+      target: 'dev'
+    environment:
+      APP_ENV: 'test'
+    entrypoint: ['php', 'bin/phpunit']
+    profiles:
+      - 'test'
+
+  # Sends a video to POST /frames, frame after frame: `docker compose run --rm sender /videos/goal1.mov`.
+  sender:
+    build:
+      context: './referee/'
+    volumes:
+      - './referee/videos:/videos:ro'
+    depends_on:
+      php:
+        condition: 'service_healthy'
+    profiles:
+      - 'tools'
+
+  # The trained YOLO11n model in OpenVINO Model Server, KServe v2 on port 8000. On the CPU: no GPU needed.
+  yolo:
+    image: 'openvino/model_server:2026.4.1'
+    restart: 'unless-stopped'
+    # LATENCY: 4 threads on one frame. POST /frames sends one frame at a time: with THROUGHPUT (4 frames at the same
+    # time, one thread each), one frame takes about 90 ms on a laptop i5-1145G7.
+    cpus: 4
+    expose:
+      - '8000'
+    volumes:
+      - './yolo/models:/models:ro'
+    command:
+      - '--model_name'
+      - 'ball-detector'
+      - '--model_path'
+      - '/models/ball-detector'
+      - '--rest_port'
+      - '8000'
+      - '--plugin_config'
+      - '{"INFERENCE_NUM_THREADS": 4, "PERFORMANCE_HINT": "LATENCY"}'
+    healthcheck:
+      test: ['CMD', 'curl', '-fs', 'http://localhost:8000/v2/health/ready']
+      interval: '5s'
+      timeout: '5s'
+      start_period: '10s'
+      retries: 3

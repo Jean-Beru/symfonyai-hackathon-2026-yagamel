@@ -1,0 +1,47 @@
+# https://frankenphp.dev/docs/config
+{
+	skip_install_trust
+
+	servers {
+		timeouts {
+			read_body 10s
+		}
+	}
+}
+
+# Plain HTTP on the LAN. The model runs in the yolo service.
+:{$SERVER_PORT:3000} {
+	root {$SERVER_ROOT:public/}
+
+	# The same as post_max_size (9M): over it, PHP empties the request without a word. Caddy answers 413 first.
+	request_body {
+		max_size 9MiB
+	}
+
+	# The hub of the live page. The API publishes with a JWT (symfony/mercure-bundle). The live page subscribes
+	# without a token.
+	mercure {
+		issuer {$MERCURE_JWT_ISSUER} {
+			publisher {
+				jwt {$MERCURE_JWT_SECRET}
+			}
+		}
+		anonymous
+	}
+
+	# The frames of POST /frames (App\Frame\FrameStorage), for the live page: served by Caddy, not by a PHP worker.
+	handle_path /videos/* {
+		root * /app/var/videos
+		file_server
+	}
+
+	php_server {
+		# Worker mode: the Symfony runtime keeps the kernel between the requests, and restarts the worker after
+		# FRANKENPHP_LOOP_MAX requests.
+		worker {
+			file ./public/index.php
+			num {$PHP_WORKERS:4}
+			env FRANKENPHP_LOOP_MAX {$FRANKENPHP_LOOP_MAX:1000}
+		}
+	}
+}

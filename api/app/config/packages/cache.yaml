@@ -1,0 +1,9 @@
+framework:
+    cache:
+        pools:
+            # The table and the state of the referee for each video (App\Frame\FrameAnalyzer, App\Referee\Referee),
+            # shared by the workers of FrankenPHP.
+            referee.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 3600
+

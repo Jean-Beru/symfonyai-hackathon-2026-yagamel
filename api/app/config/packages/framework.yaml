@@ -1,0 +1,16 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+
+    session: false
+
+    # YOLO is the only HTTP target. BallDetector starts all the requests at once: the timeout is an idle timeout per
+    # response, keep it above the queue of the requests in flight. No max_duration: it fails with a plain
+    # TransportException, a 502 and not a 504.
+    http_client:
+        default_options:
+            timeout: '%env(float:YOLO_TIMEOUT)%'
+
+when@test:
+    framework:
+        test: true
